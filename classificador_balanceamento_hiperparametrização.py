@@ -97,6 +97,8 @@ bank_rf = rf_otimizado.fit(atributos_b, classes_b)
 # 11. SALVAR MODELO (só o modelo e o encoder da classe)
 dump(bank_rf, open('bank_rf.pkl', 'wb'))
 dump(le_classe, open('le_classe.pkl', 'wb'))
+colunas_treino = atributos_b.columns
+dump(colunas_treino, open('colunas_treino.pkl', 'wb'))
 
 print("\n Modelo salvo como 'bank_rf.pkl'")
 print("LabelEncoder da classe salvo como 'le_classe.pkl'")
