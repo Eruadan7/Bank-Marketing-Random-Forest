@@ -4,39 +4,33 @@ from imblearn.over_sampling import SMOTE
 from pickle import dump
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV, cross_validate
-from sklearn.preprocessing import LabelEncoder
 from pprint import pprint
 
 
 # 1. CARREGAR OS DADOS
-
 dados = pd.read_csv('bank-additional.csv', sep=';')
 
 
-# 2. CODIFICAR VARIÁVEIS CATEGÓRICAS
-
-# Identificar colunas categóricas (tipo object)
-colunas_categoricas = dados.select_dtypes(include=['object']).columns
-
-# Aplicar LabelEncoder em cada coluna categórica
-for col in colunas_categoricas:
-    if col != 'y':  # Não codificar a coluna alvo ainda
-        le = LabelEncoder()
-        dados[col] = le.fit_transform(dados[col])
-
-
-# 3. SEPARAR ATRIBUTOS E CLASSE
-
+# 2. SEPARAR ATRIBUTOS E CLASSE (antes da codificação)
 dados_atributos = dados.drop('y', axis=1)
 dados_classe = dados['y']
 
-# Codificar a classe também
+
+# 3. ONE-HOT ENCODING (transforma tudo em números de uma vez!)
+dados_atributos = pd.get_dummies(dados_atributos, drop_first=True)
+
+# Ver o resultado: muitas colunas novas!
+print(f"Colunas originais: {dados.shape[1]}")
+print(f"Colunas após One-Hot: {dados_atributos.shape[1]}")
+
+
+# 4. CODIFICAR A CLASSE (ainda precisa de LabelEncoder para o y)
+from sklearn.preprocessing import LabelEncoder
 le_classe = LabelEncoder()
 dados_classe = le_classe.fit_transform(dados_classe)
 
 
-# 4. BALANCEAMENTO COM SMOTE
-
+# 5. BALANCEAMENTO COM SMOTE
 resampler = SMOTE(random_state=42)
 atributos_b, classes_b = resampler.fit_resample(dados_atributos, dados_classe)
 
@@ -44,8 +38,7 @@ print("Distribuição após SMOTE:")
 print(pd.Series(classes_b).value_counts())
 
 
-# 5. DEFINIR GRADE DE HIPERPARÂMETROS
-
+# 6. DEFINIR GRADE DE HIPERPARÂMETROS
 rf_grid = {
     'n_estimators': [int(x) for x in np.linspace(10, 100, num=10)],
     'criterion': ['gini', 'entropy'],
@@ -55,8 +48,7 @@ rf_grid = {
 }
 
 
-# 6. OTIMIZAÇÃO COM RANDOMIZEDSEARCHCV
-
+# 7. OTIMIZAÇÃO COM RANDOMIZEDSEARCHCV
 rf = RandomForestClassifier(random_state=42)
 
 rf_hyperparameters = RandomizedSearchCV(
@@ -75,13 +67,11 @@ print("\n=== MELHORES PARÂMETROS ===")
 pprint(rf_hyperparameters.best_params_)
 
 
-# 7. INSTANCIAR MODELO OTIMIZADO
-
+# 8. INSTANCIAR MODELO OTIMIZADO
 rf_otimizado = RandomForestClassifier(**rf_hyperparameters.best_params_, random_state=42)
 
 
-# 8. VALIDAÇÃO CRUZADA FINAL (10 FOLDS)
-
+# 9. VALIDAÇÃO CRUZADA FINAL (10 FOLDS)
 scoring = ['accuracy', 'f1_macro', 'precision', 'recall']
 
 scores_cross = cross_validate(
@@ -100,15 +90,13 @@ print(f"Recall médio:    {scores_cross['test_recall'].mean():.4f}")
 print(f"F1-Score médio:  {scores_cross['test_f1_macro'].mean():.4f}")
 
 
-# 9. TREINAR MODELO FINAL
-
+# 10. TREINAR MODELO FINAL
 bank_rf = rf_otimizado.fit(atributos_b, classes_b)
 
 
-# 10. SALVAR MODELO (INCLUINDO O LabelEncoder DA CLASSE)
-
+# 11. SALVAR MODELO (só o modelo e o encoder da classe)
 dump(bank_rf, open('bank_rf.pkl', 'wb'))
 dump(le_classe, open('le_classe.pkl', 'wb'))
 
 print("\n Modelo salvo como 'bank_rf.pkl'")
-print(" LabelEncoder da classe salvo como 'le_classe.pkl'")
+print("LabelEncoder da classe salvo como 'le_classe.pkl'")
