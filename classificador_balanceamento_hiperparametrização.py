@@ -6,7 +6,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV, cross_validate
 from pprint import pprint
 
-
 # 1. CARREGAR OS DADOS
 dados = pd.read_csv('bank-additional.csv', sep=';')
 
